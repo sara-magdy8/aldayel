@@ -3,6 +3,8 @@ import html2canvas from 'html2canvas';
 import { Property } from '@/types';
 import { settingsService } from '@/services/settings';
 import { propertiesService, PropertyViewData } from '@/services/properties';
+import { Soum, soumsService } from '@/services/soums';
+import QRCode from 'qrcode';
 
 /**
  * Client-facing property detail sheet exported as a downloadable PDF file.
@@ -23,6 +25,10 @@ interface PropertyPdfOptions {
   officeName?: string;
   /** Office logo as a base64 data URI (for embedding in the canvas). */
   officeLogo?: string | null;
+  /** السومات — printed only when the sale property opts in (show_soum_in_pdf). */
+  soums?: Soum[];
+  /** QR code (data URI) for location_link, so a printed sheet can still reach it. */
+  locationQr?: string | null;
 }
 
 const esc = (v: unknown): string =>
@@ -45,11 +51,11 @@ function row(label: string, value?: string | number | null): string {
  * has been rasterised, we can measure where that text landed and stamp a real
  * clickable link annotation over it (see `collectLinkBoxes`).
  */
-function linkRow(label: string, href?: string | null): string {
+function linkRow(label: string, href?: string | null, text?: string, qr?: string | null): string {
   if (!href) return '';
   return `<tr><td class="lbl">${esc(label)}</td><td class="val link"><span data-pdf-link="${esc(
     normalizeUrl(href),
-  )}">${esc(href)}</span></td></tr>`;
+  )}">${esc(text ?? href)}</span>${qr ? `<img class="qr" src="${qr}" alt="" />` : ''}</td></tr>`;
 }
 
 /** PDF link annotations need an absolute URL — assume https when no scheme is given. */
@@ -69,6 +75,10 @@ function buildHtml(view: PropertyViewData, options: PropertyPdfOptions): string 
     isRental ? 'مبلغ الإيجار' : 'السعر',
     view.price != null ? `${view.price.toLocaleString()} د.ك` : undefined,
   );
+
+  const lastSoum = isRental ? undefined : lastSoumAmount(options.soums ?? []);
+  // With no price set, the last bid stands in for it and takes its label.
+  const soumRow = row(view.price == null ? 'السعر' : 'السوم',lastSoum != null ? `${lastSoum.toLocaleString()} د.ك` : undefined);
 
   const imagesHtml = images.length
     ? `<div class="section"><h2>الصور</h2><div class="imgs">${images.map(src => `<img src="${src}" />`).join('')}</div></div>`
@@ -94,13 +104,15 @@ function buildHtml(view: PropertyViewData, options: PropertyPdfOptions): string 
       ${row('نوع العرض', view.listing_type)}
       ${row('نوع العقار', view.property_type)}
       ${row('التصنيف', view.category)}
-      ${row('النشاط', view.activity)}
+      ${row(isRental ? 'النشاط' : 'حالة الإشغال', view.activity)}
+      ${!isRental ? row('حالة البناء', view.building_status) : ''}
       ${row('العنوان', view.address)}
       ${row('المساحة', view.area != null ? `${view.area} م²` : undefined)}
       ${priceRow}
+      ${soumRow}
       ${isRental ? row('فترة السماح', view.grace_period) : ''}
       ${row('رقم التواصل', view.contact)}
-      ${linkRow('رابط الموقع', view.location_link)}
+      ${linkRow('رابط الموقع', view.location_link, 'انقر هنا للوصول لرابط الموقع', options.locationQr)}
     </table>
   </div>
 
@@ -110,6 +122,15 @@ function buildHtml(view: PropertyViewData, options: PropertyPdfOptions): string 
   ${imagesHtml}
 
   <div class="footer">تم إنشاء هذا المستند في ${esc(printedAt)}</div>`;
+}
+
+/**
+ * The amount of the most recently recorded bid — highest id, since ids follow
+ * insertion order (soum_date is user-entered and can be back-dated).
+ */
+function lastSoumAmount(soums: Soum[]): number | undefined {
+  if (!soums.length) return undefined;
+  return soums.reduce((a, b) => (Number(b.id) > Number(a.id) ? b : a)).amount;
 }
 
 const STYLES = `
@@ -138,6 +159,7 @@ const STYLES = `
   #pdf-root td.lbl { color: #6b7280; width: 38%; }
   #pdf-root td.val { font-weight: 600; }
   #pdf-root td.val.link { color: #0f766e; word-break: break-all; font-weight: 500; text-decoration: underline; }
+  #pdf-root td.val.link .qr { display: block; width: 110px; height: 110px; margin-top: 8px; }
   #pdf-root .desc { font-size: 14px; white-space: pre-wrap; }
   #pdf-root .imgs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   #pdf-root .imgs img { width: 100%; height: 160px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; }
@@ -201,6 +223,19 @@ export async function downloadPropertyPdf(property: Property, options: PropertyP
   // Fetch the canonical view data from the backend — the single source shared
   // with the public share link — so the PDF never re-derives fields locally.
   const view = await propertiesService.getViewData(property.id);
+
+  // Generated locally (no network), so a failure only drops the QR.
+  if (options.locationQr === undefined && view.location_link) {
+    const locationQr = await QRCode.toDataURL(normalizeUrl(view.location_link), { margin: 10, width: 220 }).catch(() => null);
+    options = { ...options, locationQr };
+  }
+
+  // السومات stay off the shared view data (the public link must never show
+  // them); they are fetched here, fresh, and only when the property opts in.
+  if (options.soums === undefined && property.show_soum_in_pdf && view.listing_type !== 'إيجار') {
+    const soums = await soumsService.list(property.id).catch(() => []);
+    options = { ...options, soums };
+  }
 
   // Pull the office name + logo (base64) from settings unless the caller supplied them.
   if (options.officeName === undefined || options.officeLogo === undefined) {

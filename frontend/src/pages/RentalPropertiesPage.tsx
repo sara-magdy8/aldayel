@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Eye, Pencil, Link2, Trash2, Layers, FileDown, Loader2, ClipboardList } from 'lucide-react';
+import { Plus, Eye, Pencil, Link2, Trash2, Layers, FileDown, Loader2, ClipboardList, History } from 'lucide-react';
 import ResetFiltersButton from '@/components/ResetFiltersButton';
 import DataTablePagination, { DEFAULT_PER_PAGE } from '@/components/DataTablePagination';
 import { PropertyListState, readPropertyListState } from '@/lib/propertyListState';
@@ -23,6 +23,7 @@ import { MatchOptions } from '@/lib/query';
 import MatchCriteriaFields, { DEFAULT_MATCH_OPTIONS } from '@/components/MatchCriteriaFields';
 import PropertyFormDrawer from '@/components/PropertyFormDrawer';
 import PropertyViewDrawer from '@/components/PropertyViewDrawer';
+import PropertyLogDialog from '@/components/PropertyLogDialog';
 import { formatDateTime } from '@/lib/utils';
 import { downloadPropertyPdf } from '@/lib/propertyPdf';
 import { Label } from '@/components/ui/label';
@@ -94,6 +95,7 @@ const RentalPropertiesPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [viewProperty, setViewProperty] = useState<Property | null>(null);
+  const [logProperty, setLogProperty] = useState<Property | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   // Id of the property whose PDF is currently being generated, so we can show
   // a spinner and block repeat clicks (PDF build is slow on the live server).
@@ -240,7 +242,7 @@ const RentalPropertiesPage = () => {
       listing_type, name, property_code, property_type, category, filmed_by, priority, activities, owner_id, plot_number,
       area, governorate_id, area_id, location_link, description, guard_name, guard_phone,
       broker_id, manager_id,
-      forsale_link, instagram_link, whatsapp_link, marketing_status, commission,
+      forsale_link, instagram_link, whatsapp_link, marketing_status, show_soum_in_pdf, commission,
       notes, status, rent_amount, price, conditions, grace_period,
       tenant_id, tenant_start, tenant_end, sale_date,
     } = property;
@@ -252,7 +254,7 @@ const RentalPropertiesPage = () => {
       broker_id: broker_id ?? null,
       manager_id: manager_id ?? null,
       tenant_id: tenant_id ?? null,
-      forsale_link, instagram_link, whatsapp_link, marketing_status, commission,
+      forsale_link, instagram_link, whatsapp_link, marketing_status, show_soum_in_pdf, commission,
       notes, status, rent_amount, price, conditions, grace_period,
       tenant_start, tenant_end, sale_date,
     };
@@ -597,6 +599,7 @@ const RentalPropertiesPage = () => {
                     {p.status === 'متاح' && (
                       <Button variant="ghost" size="icon" onClick={() => handleShowMatches(p)} title="الطلبات المطابقة"><ClipboardList size={16} /></Button>
                     )}
+                    <Button variant="ghost" size="icon" onClick={() => setLogProperty(p)} title="سجل العقار"><History size={16} /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(p)} disabled={downloadingId === p.id} title="تحميل PDF">
                       {downloadingId === p.id ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
                     </Button>
@@ -708,6 +711,7 @@ const RentalPropertiesPage = () => {
           )}
         </DialogContent>
       </Dialog>
+      <PropertyLogDialog property={logProperty} onClose={() => setLogProperty(null)} />
     </div>
   );
 };
