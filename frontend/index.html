@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>مكتب العقارات - نظام إدارة</title>
+    <meta name="description" content="نظام إدارة مكتب العقارات الداخلي" />
+
+    <!--
+      Static fallback icon. public/favicon.ico is the office logo, and it is also
+      what the browser falls back to for anything on the domain that declares no
+      icon of its own — a storage image opened directly, for instance. When the
+      settings API is reachable at build time, branding-meta.ts appends a second
+      <link rel="icon"> pointing at office_favicon, which wins over this one.
+    -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+
+    <!--
+      Link preview shown by WhatsApp / Telegram / Twitter when the system URL is
+      shared. The values below are fallbacks only: at build time
+      vite-plugins/branding-meta.ts overwrites the title and descriptions with
+      office_name / office_description from the settings table and appends
+      og:image pointing at office_logo. They stay as-is if the API is unreachable
+      during the build.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="مكتب العقارات - نظام إدارة" />
+    <meta property="og:description" content="نظام إدارة مكتب العقارات الداخلي" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

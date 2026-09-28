@@ -1,0 +1,31 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Share links (/view/{token}) previewed in WhatsApp, Telegram, Facebook…
+  #
+  # This is a static build with one index.html, so its og: tags are identical for
+  # every URL, and crawlers never run the JavaScript that could change them. The
+  # Laravel app under /apis/ renders per-property tags at /view/{token}
+  # (LinkPreviewController) — hand crawlers over to it and leave everyone else on
+  # the SPA, so real visitors still get the property page.
+  #
+  # Internal rewrite rather than [P]: no mod_proxy dependency, and the request
+  # never leaves the server.
+  RewriteCond %{HTTP_USER_AGENT} (facebookexternalhit|WhatsApp|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot|Pinterest|SkypeUriPreview|vkShare|redditbot|Googlebot|bingbot|Applebot|Embedly|Iframely) [NC]
+  RewriteRule ^view/(.*)$ /apis/public/view/$1 [L]
+
+  # If the request is for a real file or directory, serve it as-is
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Otherwise, hand the request to the SPA entry point.
+  #
+  # The /apis/ exclusion is load-bearing: Apache re-runs this file against the
+  # rewritten /apis/public/view/… path, and without it the fallback swallows the
+  # request and serves index.html — which looks exactly like the preview never
+  # having been wired up at all.
+  RewriteCond %{REQUEST_URI} !^/apis/
+  RewriteRule ^ index.html [L]
+</IfModule>
