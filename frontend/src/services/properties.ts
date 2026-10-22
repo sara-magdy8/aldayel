@@ -55,6 +55,8 @@ interface RawProperty {
   instagram_link?: string | null;
   whatsapp_link?: string | null;
   marketing_status?: boolean;
+  /** عقارات البيع — whether the property PDF prints the highest السوم. */
+  show_soum_in_pdf?: boolean;
   commission?: number | null;
   notes?: string | null;
   status: PropertyStatus;
@@ -113,6 +115,7 @@ function normaliseProperty(raw: RawProperty): Property {
     instagram_link: raw.instagram_link ?? undefined,
     whatsapp_link: raw.whatsapp_link ?? undefined,
     marketing_status: raw.marketing_status ?? false,
+    show_soum_in_pdf: raw.show_soum_in_pdf ?? false,
     commission: raw.commission ?? undefined,
     notes: raw.notes ?? undefined,
     rent_amount: raw.rent_amount ?? undefined,
@@ -160,6 +163,8 @@ export interface PropertyViewData {
   listing_type?: ListingType;
   conditions?: string | null;
   grace_period?: string | null;
+  /** حالة البناء — admin export only (absent on the public link). */
+  building_status?: string | null;
 }
 
 export interface PropertyFormData {
@@ -194,6 +199,8 @@ export interface PropertyFormData {
   whatsapp_link?: string;
   /** حالة التسويق — تم / لم يتم. */
   marketing_status?: boolean;
+  /** عقارات البيع — whether the property PDF prints the highest السوم. */
+  show_soum_in_pdf?: boolean;
   commission?: number;
   notes?: string;
   status: PropertyStatus;

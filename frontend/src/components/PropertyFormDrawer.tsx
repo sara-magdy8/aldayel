@@ -95,6 +95,7 @@ const PropertyFormDrawer: React.FC<PropertyFormDrawerProps> = ({ open, onOpenCha
     instagram_link: '',
     whatsapp_link: '',
     marketing_status: false,
+    show_soum_in_pdf: false,
     commission: undefined,
     notes: '',
     status: 'متاح',
@@ -116,7 +117,7 @@ const PropertyFormDrawer: React.FC<PropertyFormDrawerProps> = ({ open, onOpenCha
         governorate_id: undefined, area_id: undefined, address: '', area: undefined, rent_amount: undefined, price: undefined, location_link: '',
         description: '', conditions: '', grace_period: '', guard_name: '', guard_phone: '',
         broker_id: undefined, manager_id: undefined,
-        forsale_link: '', instagram_link: '', whatsapp_link: '', marketing_status: false, commission: undefined,
+        forsale_link: '', instagram_link: '', whatsapp_link: '', marketing_status: false, show_soum_in_pdf: false, commission: undefined,
         notes: '', status: 'متاح', tenant_id: undefined, tenant_name: '', tenant_start: '', tenant_end: '', sale_date: '',
       });
     }
@@ -213,10 +214,10 @@ const PropertyFormDrawer: React.FC<PropertyFormDrawerProps> = ({ open, onOpenCha
     clientsService.options({ search: search || undefined, type: types });
 
   const fetchCompanyIndividualClient = fetchClientsOfType(['شركة', 'فرد']);
-  const fetchBrokers   = fetchClientsOfType(['وسيط']);
-  const fetchManagers  = fetchClientsOfType(['مسؤول العقار']);
+  const fetchBrokers = fetchClientsOfType(['وسيط']);
+  const fetchManagers = fetchClientsOfType(['مسؤول العقار']);
   // المستأجر is a person or a company — never a وسيط / مسؤول عقار.
-  const fetchTenants   = fetchClientsOfType(['فرد', 'شركة']);
+  const fetchTenants = fetchClientsOfType(['فرد', 'شركة']);
 
   // The phone rides along in the الوسيط / مسؤول العقار labels since the separate
   // phone fields are gone.
@@ -310,6 +311,7 @@ const PropertyFormDrawer: React.FC<PropertyFormDrawerProps> = ({ open, onOpenCha
       instagram_link: form.instagram_link,
       whatsapp_link: form.whatsapp_link,
       marketing_status: form.marketing_status ?? false,
+      show_soum_in_pdf: form.show_soum_in_pdf ?? false,
       commission: form.commission,
       notes: form.notes,
       status: (form.status as PropertyStatus) || 'متاح',
@@ -443,7 +445,7 @@ const PropertyFormDrawer: React.FC<PropertyFormDrawerProps> = ({ open, onOpenCha
 
             {/* النشاط — يمكن اختيار أكثر من نشاط */}
             <div>
-              <Label>{isRental ? 'النشاط' : 'حالة الاشغال' }</Label>
+              <Label>{isRental ? 'النشاط' : 'حالة الاشغال'}</Label>
               <MultiSearchableSelect
                 value={form.activities || []}
                 onValueChange={v => updateField('activities', v)}
@@ -543,7 +545,7 @@ const PropertyFormDrawer: React.FC<PropertyFormDrawerProps> = ({ open, onOpenCha
               </div>
             ) : (
               <div>
-                <Label>السعر *</Label>
+                <Label>السعر</Label>
                 <div className="flex items-center gap-2">
                   <Input type="number" value={form.price || ''} onChange={e => updateField('price', e.target.value ? Number(e.target.value) : undefined)} />
                   <span className="text-sm text-muted-foreground whitespace-nowrap">د.ك</span>
@@ -673,6 +675,7 @@ const PropertyFormDrawer: React.FC<PropertyFormDrawerProps> = ({ open, onOpenCha
               <Textarea value={form.notes || ''} onChange={e => updateField('notes', e.target.value)} rows={2} />
             </div>
 
+
             {/* الحالة */}
             <div>
               <Label>الحالة *</Label>
@@ -735,6 +738,22 @@ const PropertyFormDrawer: React.FC<PropertyFormDrawerProps> = ({ open, onOpenCha
                 </Button>
               </div>
             )}
+
+            {/* إظهار السوم في PDF — عقارات البيع فقط (الإيجار لا سوم له) */}
+            {!isRental && (
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="show-soum-in-pdf" className="cursor-pointer">إظهار السوم في PDF العقار</Label>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="show-soum-in-pdf"
+                    checked={!!form.show_soum_in_pdf}
+                    onCheckedChange={v => updateField('show_soum_in_pdf', v)}
+                  />
+                  <span className="text-sm text-muted-foreground">{form.show_soum_in_pdf ? 'نعم' : 'لا'}</span>
+                </div>
+              </div>
+            )}
+
 
             {/* المرفقات */}
             <div>

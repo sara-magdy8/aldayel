@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/utils';
 import { Property } from '@/types';
 import { ApiError } from '@/services/api';
 import { Soum, SoumFormData, SoumType, SOUM_TYPES, SOUM_TYPE_INDIRECT, soumsService } from '@/services/soums';
@@ -155,7 +155,7 @@ const PropertySoumsDialog: React.FC<PropertySoumsDialogProps> = ({ property, onC
             touching the body's buttons, which all sit deeper. */}
         <DialogContent
           dir="rtl"
-          className="max-w-3xl max-h-[90vh] overflow-y-auto [&>button]:right-auto [&>button]:left-4"
+          className="w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto [&>button]:right-auto [&>button]:left-4"
         >
           <DialogHeader className="text-right sm:text-right border-b pb-4">
             <DialogTitle>سومات العقار</DialogTitle>
@@ -262,7 +262,7 @@ const PropertySoumsDialog: React.FC<PropertySoumsDialogProps> = ({ property, onC
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table className="min-w-[640px]">
+                  <Table className="min-w-[860px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>اسم السوام</TableHead>
@@ -270,6 +270,8 @@ const PropertySoumsDialog: React.FC<PropertySoumsDialogProps> = ({ property, onC
                         <TableHead>المبلغ</TableHead>
                         <TableHead>نوع السوم</TableHead>
                         <TableHead>الوسيط</TableHead>
+                        <TableHead>أُضيف بواسطة</TableHead>
+                        <TableHead>تاريخ الإضافة</TableHead>
                         <TableHead>الإجراءات</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -289,6 +291,8 @@ const PropertySoumsDialog: React.FC<PropertySoumsDialogProps> = ({ property, onC
                               ? <span>{s.broker_name}{s.broker_phone ? ` — ${s.broker_phone}` : ''}</span>
                               : '-'}
                           </TableCell>
+                          <TableCell>{s.created_by_name || '-'}</TableCell>
+                          <TableCell dir="ltr" className="text-right whitespace-nowrap">{formatDateTime(s.created_at)}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Button

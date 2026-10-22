@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Eye, Pencil, Link2, Trash2, Layers, FileDown, Loader2, ClipboardList, Tag } from 'lucide-react';
+import { Plus, Eye, Pencil, Link2, Trash2, Layers, FileDown, Loader2, ClipboardList, History, Tag } from 'lucide-react';
 import ResetFiltersButton from '@/components/ResetFiltersButton';
 import DataTablePagination, { DEFAULT_PER_PAGE } from '@/components/DataTablePagination';
 import { PropertyListState, readPropertyListState } from '@/lib/propertyListState';
@@ -25,14 +25,19 @@ import { MatchOptions } from '@/lib/query';
 import MatchCriteriaFields, { DEFAULT_MATCH_OPTIONS } from '@/components/MatchCriteriaFields';
 import PropertyFormDrawer from '@/components/PropertyFormDrawer';
 import PropertyViewDrawer from '@/components/PropertyViewDrawer';
+import PropertyLogDialog from '@/components/PropertyLogDialog';
 import PropertySoumsDialog from '@/components/PropertySoumsDialog';
 import { Label } from '@/components/ui/label';
 
-const statusColors: Record<string, string> = {
-  'متاح': 'bg-green-100 text-green-800',
-  'محجوز': 'bg-amber-100 text-amber-800',
-  'مباع': 'bg-gray-100 text-gray-800',
+// The table has no status / marketing columns: the row background tints by
+// status and a stripe on the row's start edge marks marketing status.
+const statusRowColors: Record<string, string> = {
+  'متاح': 'bg-green-50 hover:bg-green-100/70',
+  'محجوز': 'bg-amber-50 hover:bg-amber-100/70',
+  'مباع': 'bg-gray-100 hover:bg-gray-200/70',
 };
+const marketingStripe = (marketed: boolean) =>
+  `border-s-4 ${marketed ? 'border-s-primary' : 'border-s-red-400'}`;
 
 // Area input step (م²). Filtering by area uses two free-text number inputs
 // (from / to); an empty input means "unbounded" on that side.
@@ -98,6 +103,7 @@ const SalePropertiesPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [viewProperty, setViewProperty] = useState<Property | null>(null);
+  const [logProperty, setLogProperty] = useState<Property | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   // Id of the property whose PDF is currently being generated, so we can show
   // a spinner and block repeat clicks (PDF build is slow on the live server).
@@ -250,7 +256,7 @@ const SalePropertiesPage = () => {
       listing_type, name, property_code, property_type, category, filmed_by, building_status, priority, activities, owner_id, plot_number,
       area, governorate_id, area_id, location_link, description, guard_name, guard_phone,
       broker_id, manager_id,
-      forsale_link, instagram_link, whatsapp_link, marketing_status, commission,
+      forsale_link, instagram_link, whatsapp_link, marketing_status, show_soum_in_pdf, commission,
       notes, status, rent_amount, price, conditions, grace_period,
       tenant_id, tenant_start, tenant_end, sale_date,
     } = property;
@@ -264,7 +270,7 @@ const SalePropertiesPage = () => {
       broker_id: broker_id ?? null,
       manager_id: manager_id ?? null,
       tenant_id: tenant_id ?? null,
-      forsale_link, instagram_link, whatsapp_link, marketing_status, commission,
+      forsale_link, instagram_link, whatsapp_link, marketing_status, show_soum_in_pdf, commission,
       notes, status, rent_amount, price, conditions, grace_period,
       tenant_start, tenant_end, sale_date,
     };
@@ -558,6 +564,18 @@ const SalePropertiesPage = () => {
         <ResetFiltersButton show={hasActiveFilters} onReset={resetFilters} />
       </div>
 
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        <span className="font-medium">الحالة:</span>
+        {Object.keys(statusRowColors).map(s => (
+          <span key={s} className="flex items-center gap-1">
+            <span className={`h-3 w-3 rounded-sm border ${statusRowColors[s]}`} />{s}
+          </span>
+        ))}
+        <span className="font-medium ms-2">التسويق:</span>
+        <span className="flex items-center gap-1"><span className="h-3 w-1 rounded-sm bg-primary" />تم</span>
+        <span className="flex items-center gap-1"><span className="h-3 w-1 rounded-sm bg-red-400" />لم يتم</span>
+      </div>
+
       <div className="bg-card rounded-lg border overflow-x-auto">
         <Table className="min-w-[900px]">
           <TableHeader>
@@ -573,8 +591,6 @@ const SalePropertiesPage = () => {
               <TableHead>العنوان</TableHead>
               <TableHead>المساحة</TableHead>
               <TableHead>السعر</TableHead>
-              <TableHead>حالة التسويق</TableHead>
-              <TableHead>الحالة</TableHead>
               {/*  <TableHead>تاريخ الإضافة</TableHead> */}
               <TableHead>السوم</TableHead>
               <TableHead>الإجراءات</TableHead>
@@ -583,19 +599,23 @@ const SalePropertiesPage = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={16} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                   جارٍ التحميل...
                 </TableCell>
               </TableRow>
             ) : properties.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={16} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                   لا توجد عقارات
                 </TableCell>
               </TableRow>
             ) : properties.map((p, i) => (
-              <TableRow key={p.id}>
-                <TableCell>{p.property_code}</TableCell>
+              <TableRow
+                key={p.id}
+                className={statusRowColors[p.status]}
+                title={`${p.status} · التسويق: ${p.marketing_status ? 'تم' : 'لم يتم'}`}
+              >
+                <TableCell className={marketingStripe(!!p.marketing_status)}>{p.property_code}</TableCell>
                 <TableCell className="font-medium">{p.name}</TableCell>
                 <TableCell>{p.owner_name}</TableCell>
                 <TableCell>{p.category}</TableCell>
@@ -610,14 +630,6 @@ const SalePropertiesPage = () => {
                 <TableCell className="max-w-[200px] truncate">{p.address}</TableCell>
                 <TableCell>{p.area ? `${p.area} م²` : '-'}</TableCell>
                 <TableCell>{p.price ? `${p.price.toLocaleString()} د.ك` : '-'}</TableCell>
-                <TableCell>
-                  <Badge variant={p.marketing_status ? 'default' : 'secondary'}>
-                    {p.marketing_status ? 'تم' : 'لم يتم'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className={statusColors[p.status]}>{p.status}</Badge>
-                </TableCell>
                 {/* <TableCell dir="ltr" className="text-left">{formatDateTime(p.created_at)}</TableCell> */}
                 <TableCell>
                   {/* Tag button carrying the bid count in a corner badge, with
@@ -656,6 +668,7 @@ const SalePropertiesPage = () => {
                     {p.status === 'متاح' && (
                       <Button variant="ghost" size="icon" onClick={() => handleShowMatches(p)} title="الطلبات المطابقة"><ClipboardList size={16} /></Button>
                     )}
+                    <Button variant="ghost" size="icon" onClick={() => setLogProperty(p)} title="سجل العقار"><History size={16} /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDownloadPdf(p)} disabled={downloadingId === p.id} title="تحميل PDF">
                       {downloadingId === p.id ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
                     </Button>
@@ -772,6 +785,7 @@ const SalePropertiesPage = () => {
           )}
         </DialogContent>
       </Dialog>
+      <PropertyLogDialog property={logProperty} onClose={() => setLogProperty(null)} />
     </div>
   );
 };

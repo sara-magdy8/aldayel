@@ -62,6 +62,8 @@ export interface Property {
   whatsapp_link?: string;
   /** حالة التسويق — admin-set flag: تم / لم يتم. */
   marketing_status?: boolean;
+  /** عقارات البيع — whether the property PDF prints the highest السوم. */
+  show_soum_in_pdf?: boolean;
   commission?: number;
   notes?: string;
   status: PropertyStatus;

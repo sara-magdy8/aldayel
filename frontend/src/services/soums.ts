@@ -21,6 +21,8 @@ interface RawSoum {
   soum_type: SoumType;
   broker_name: string | null;
   broker_phone: string | null;
+  created_by_name: string | null;
+  created_at: string;
 }
 
 // ── Normalised shape ───────────────────────────────────────────────────────
@@ -36,6 +38,10 @@ export interface Soum {
   /** Filled for غير مباشر bids only. */
   broker_name?: string;
   broker_phone?: string;
+  /** Name of the user who recorded the bid; missing for bids predating created_by. */
+  created_by_name?: string;
+  /** Full ISO timestamp of when the bid was recorded. */
+  created_at: string;
 }
 
 function normalise(raw: RawSoum): Soum {
@@ -48,6 +54,8 @@ function normalise(raw: RawSoum): Soum {
     soum_type: raw.soum_type,
     broker_name: raw.broker_name ?? undefined,
     broker_phone: raw.broker_phone ?? undefined,
+    created_by_name: raw.created_by_name ?? undefined,
+    created_at: raw.created_at,
   };
 }
 
